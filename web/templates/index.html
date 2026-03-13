@@ -1,0 +1,199 @@
+{{define "index.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>SiteLens — Categorize</title>
+</head>
+<body>
+  {{template "nav" .}}
+
+  <div class="page-wrap">
+    {{template "stat-bar" .}}
+
+    <!-- URL Input -->
+    <div class="input-card">
+      <div class="input-card-inner">
+        <div class="input-card-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Add URLs to categorize
+        </div>
+        <form id="url-form">
+          <textarea id="url-input" rows="3"
+            placeholder="https://example.com&#10;https://github.com&#10;https://nytimes.com"></textarea>
+          <div class="input-card-actions">
+            <button type="submit" class="btn-submit" id="submit-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Categorize
+            </button>
+            <span class="toast" id="toast"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Results — only shows current session's URLs -->
+    <div class="results-wrap" id="results-wrap" style="display:none">
+      <div class="results-header-bar">
+        <div class="chip-group" id="cat-chips">
+          <button class="chip active" onclick="filterCat(this, '')">All</button>
+          {{range .Categories}}
+          <button class="chip" data-cat="{{.}}" onclick="filterCat(this, '{{.}}')">{{.}}</button>
+          {{end}}
+        </div>
+        <div class="results-header-right">
+          <span class="count-label" id="count-label"></span>
+          <button class="btn-ghost" onclick="clearSession()">Clear</button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div id="table-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Session-scoped IDs — only show URLs added this session
+    let sessionIDs = [];
+    let pollTimer = null;
+
+    const form = document.getElementById('url-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const raw = document.getElementById('url-input').value.trim();
+      if (!raw) return;
+      const urls = raw.split('\n').map(u => u.trim()).filter(Boolean);
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Adding…';
+
+      try {
+        const res = await fetch('/api/sites', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({urls})
+        });
+        const data = await res.json();
+        if (data.inserted > 0 && data.ids) {
+          sessionIDs = [...sessionIDs, ...data.ids];
+          document.getElementById('url-input').value = '';
+          showToast(`Added ${data.inserted} URL${data.inserted > 1 ? 's' : ''}`);
+          document.getElementById('results-wrap').style.display = '';
+          refreshTable();
+          startPolling();
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Categorize';
+      }
+    });
+
+    function startPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(async () => {
+        await refreshTable();
+        // Check if any are still pending
+        const res = await fetch('/api/sites/batch?ids=' + sessionIDs.join(','));
+        const sites = await res.json();
+        const stillPending = sites.some(s => s.status === 'pending' || s.status === 'processing');
+        if (!stillPending) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          // Refresh stats strip
+          location.reload(); // simple way to update stat bar
+        }
+      }, 2000);
+    }
+
+    async function refreshTable(cat) {
+      if (!sessionIDs.length) return;
+      const qs = new URLSearchParams({ids: sessionIDs.join(',')});
+      if (cat) qs.set('category', cat);
+      const res = await fetch('/api/sites/batch?' + qs, {headers: {'HX-Request': 'true'}});
+      const html = await res.text();
+      document.getElementById('table-container').innerHTML = html;
+    }
+
+    function filterCat(el, cat) {
+      document.querySelectorAll('#cat-chips .chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      refreshTable(cat || '');
+    }
+
+    function clearSession() {
+      sessionIDs = [];
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      document.getElementById('results-wrap').style.display = 'none';
+    }
+
+    async function deleteSite(id) {
+      if (!confirm('Remove this site?')) return;
+      await fetch('/api/sites/' + id, {method: 'DELETE'});
+      sessionIDs = sessionIDs.filter(i => i !== id);
+      if (!sessionIDs.length) { clearSession(); return; }
+      refreshTable();
+    }
+
+    async function recategorize(id) {
+      await fetch('/api/sites/' + id + '/recategorize', {method: 'POST'});
+      refreshTable();
+      startPolling();
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('visible');
+      setTimeout(() => t.classList.remove('visible'), 3000);
+    }
+  </script>
+</body>
+</html>
+{{end}}
+
+{{define "table-body"}}
+{{if not .Sites}}
+<div class="empty-state">
+  <div class="empty-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  </div>
+  <p>No results for this filter.</p>
+</div>
+{{else}}
+<table>
+  <thead>
+    <tr>
+      <th>URL</th>
+      <th>Title</th>
+      <th>Category</th>
+      <th>Status</th>
+      <th>Added</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .Sites}}
+    <tr>
+      <td class="url-cell">
+        <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" title="{{.URL}}">{{.URL}}</a>
+      </td>
+      <td class="title-cell">{{if .Title}}{{.Title}}{{else}}<span class="muted">—</span>{{end}}</td>
+      <td>
+        {{if .Category}}<span class="badge cat-{{slugify .Category}}">{{.Category}}</span>{{else}}<span class="muted">—</span>{{end}}
+      </td>
+      <td><span class="status-pill status-{{.Status}}">{{.Status}}</span></td>
+      <td class="date-cell">{{.CreatedAt.Format "15:04:05"}}</td>
+      <td class="action-cell">
+        <button class="icon-btn" onclick="recategorize({{.ID}})" title="Re-categorize">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        </button>
+        <button class="icon-btn icon-btn-danger" onclick="deleteSite({{.ID}})" title="Remove">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

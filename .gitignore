@@ -1,0 +1,12 @@
+# Database
+*.db
+*.db.wal
+
+# Build output
+sitelens
+
+# Go
+vendor/
+
+# OS
+.DS_Store

@@ -1,0 +1,99 @@
+{{define "search.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "head" .}}
+  <title>SiteLens — Search</title>
+</head>
+<body>
+  {{template "nav" .}}
+
+  <div class="page-wrap">
+    {{template "stat-bar" .}}
+
+    <!-- Search input + category chips -->
+    <div class="search-card">
+      <div class="search-input-wrap">
+        <svg class="search-icon-left" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input
+          id="search-input"
+          name="q"
+          type="search"
+          class="search-input"
+          placeholder="Search URLs, titles, page content…"
+          autocomplete="off"
+          hx-get="/api/search"
+          hx-trigger="keyup changed delay:300ms, search"
+          hx-target="#search-results"
+          hx-include="#active-category"
+        >
+      </div>
+      <div class="chip-group" id="cat-chips">
+        <button class="chip active" onclick="setCategory(this, '')">All categories</button>
+        {{range .Categories}}
+        <button class="chip" onclick="setCategory(this, '{{.}}')">{{.}}</button>
+        {{end}}
+      </div>
+      <input type="hidden" id="active-category" name="category" value="">
+    </div>
+
+    <!-- Results -->
+    <div class="table-card">
+      <div id="search-results">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <p>Start typing to search through all categorized sites.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setCategory(el, cat) {
+      document.querySelectorAll('#cat-chips .chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('active-category').value = cat;
+      htmx.trigger(document.getElementById('search-input'), 'search');
+    }
+  </script>
+</body>
+</html>
+{{end}}
+
+{{define "search-results"}}
+{{if not .Sites}}
+<div class="empty-state">
+  <div class="empty-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  </div>
+  <p>No results{{if .Query}} for <strong>"{{.Query}}"</strong>{{end}}.</p>
+</div>
+{{else}}
+<div class="results-count-bar">
+  {{len .Sites}} result{{if gt (len .Sites) 1}}s{{end}}{{if .Query}} for <strong>"{{.Query}}"</strong>{{end}}
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>URL</th>
+      <th>Title</th>
+      <th>Category</th>
+      <th>Added</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .Sites}}
+    <tr>
+      <td class="url-cell">
+        <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" title="{{.URL}}">{{.URL}}</a>
+      </td>
+      <td class="title-cell">{{if .Title}}{{.Title}}{{else}}<span class="muted">—</span>{{end}}</td>
+      <td>{{if .Category}}<span class="badge cat-{{slugify .Category}}">{{.Category}}</span>{{else}}<span class="muted">—</span>{{end}}</td>
+      <td class="date-cell">{{.CreatedAt.Format "Jan 02, 15:04"}}</td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}
