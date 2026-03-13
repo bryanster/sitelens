@@ -38,7 +38,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
     </div>
     <div class="stat-body">
-      <span class="stat-num">{{.Stats.Total}}</span>
+      <span class="stat-num" id="stat-total">{{.Stats.Total}}</span>
       <span class="stat-lbl">Total sites</span>
     </div>
   </div>
@@ -47,7 +47,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
     <div class="stat-body">
-      <span class="stat-num {{if gt .Stats.Done 0}}stat-green{{end}}">{{.Stats.Done}}</span>
+      <span class="stat-num {{if gt .Stats.Done 0}}stat-green{{end}}" id="stat-done">{{.Stats.Done}}</span>
       <span class="stat-lbl">Categorized</span>
     </div>
   </div>
@@ -56,7 +56,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     </div>
     <div class="stat-body">
-      <span class="stat-num {{if gt .Stats.Pending 0}}stat-amber{{end}}">{{.Stats.Pending}}</span>
+      <span class="stat-num {{if gt .Stats.Pending 0}}stat-amber{{end}}" id="stat-pending">{{.Stats.Pending}}</span>
       <span class="stat-lbl">In progress</span>
     </div>
   </div>
@@ -65,7 +65,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
     </div>
     <div class="stat-body">
-      <span class="stat-num {{if gt .Stats.Categories 0}}stat-indigo{{end}}">{{.Stats.Categories}}</span>
+      <span class="stat-num {{if gt .Stats.Categories 0}}stat-indigo{{end}}" id="stat-categories">{{.Stats.Categories}}</span>
       <span class="stat-lbl">Categories</span>
     </div>
   </div>

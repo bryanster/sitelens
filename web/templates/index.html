@@ -99,10 +99,22 @@
         if (!stillPending) {
           clearInterval(pollTimer);
           pollTimer = null;
-          // Refresh stats strip
-          location.reload(); // simple way to update stat bar
+          // Update stat bar without reloading (which would clear sessionIDs)
+          updateStatBar();
         }
       }, 2000);
+    }
+
+    async function updateStatBar() {
+      try {
+        const res = await fetch('/api/status');
+        const d = await res.json();
+        const el = (id) => document.getElementById(id);
+        if (el('stat-total')) el('stat-total').textContent = d.total ?? '';
+        if (el('stat-done')) el('stat-done').textContent = d.done ?? '';
+        if (el('stat-pending')) el('stat-pending').textContent = d.pending ?? '';
+        if (el('stat-categories')) el('stat-categories').textContent = d.categories ?? '';
+      } catch (_) {}
     }
 
     async function refreshTable(cat) {
@@ -140,6 +152,19 @@
       startPolling();
     }
 
+    async function toggleHistory(id, btn) {
+      const existing = document.getElementById('history-row-' + id);
+      if (existing) {
+        existing.remove();
+        btn.classList.remove('active');
+        return;
+      }
+      const res = await fetch('/api/sites/' + id + '/history');
+      const html = await res.text();
+      btn.closest('tr').insertAdjacentHTML('afterend', html);
+      btn.classList.add('active');
+    }
+
     function showToast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg;
@@ -174,9 +199,7 @@
   <tbody>
     {{range .Sites}}
     <tr>
-      <td class="url-cell">
-        <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" title="{{.URL}}">{{.URL}}</a>
-      </td>
+      <td class="url-cell" title="{{.URL}}">{{.URL}}</td>
       <td class="title-cell">{{if .Title}}{{.Title}}{{else}}<span class="muted">—</span>{{end}}</td>
       <td>
         {{if .Category}}<span class="badge cat-{{slugify .Category}}">{{.Category}}</span>{{else}}<span class="muted">—</span>{{end}}
@@ -184,6 +207,9 @@
       <td><span class="status-pill status-{{.Status}}">{{.Status}}</span></td>
       <td class="date-cell">{{.CreatedAt.Format "15:04:05"}}</td>
       <td class="action-cell">
+        <button class="icon-btn" onclick="toggleHistory({{.ID}}, this)" title="History">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
         <button class="icon-btn" onclick="recategorize({{.ID}})" title="Re-categorize">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
         </button>
@@ -196,4 +222,40 @@
   </tbody>
 </table>
 {{end}}
+{{end}}
+
+{{define "history-panel"}}
+<tr id="history-row-{{.SiteID}}" class="history-row">
+  <td colspan="6">
+    <div class="history-panel">
+      {{if not .Entries}}
+      <p class="history-empty">No history yet.</p>
+      {{else}}
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Category</th>
+            <th>Model</th>
+            <th>Status</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{$total := len .Entries}}
+          {{range $i, $e := .Entries}}
+          <tr>
+            <td class="history-run">{{sub $total $i}}</td>
+            <td>{{if $e.Category}}<span class="badge cat-{{slugify $e.Category}}">{{$e.Category}}</span>{{else}}<span class="muted">—</span>{{end}}</td>
+            <td class="history-model">{{if $e.Model}}{{$e.Model}}{{else}}<span class="muted">—</span>{{end}}</td>
+            <td><span class="status-pill status-{{$e.Status}}">{{$e.Status}}</span></td>
+            <td class="date-cell">{{$e.CreatedAt.Format "Jan 02, 15:04:05"}}</td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{end}}
+    </div>
+  </td>
+</tr>
 {{end}}

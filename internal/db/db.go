@@ -59,6 +59,18 @@ func (d *DB) migrate() error {
 			created_at TIMESTAMPTZ DEFAULT now(),
 			updated_at TIMESTAMPTZ DEFAULT now()
 		);
+
+		CREATE SEQUENCE IF NOT EXISTS site_history_id_seq;
+
+		CREATE TABLE IF NOT EXISTS site_history (
+			id         INTEGER DEFAULT nextval('site_history_id_seq') PRIMARY KEY,
+			site_id    INTEGER NOT NULL,
+			category   TEXT    DEFAULT '',
+			model      TEXT    DEFAULT '',
+			status     TEXT    DEFAULT '',
+			error_msg  TEXT    DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT now()
+		);
 	`)
 	return err
 }
@@ -246,4 +258,42 @@ func (d *DB) SearchSites(query, category string) ([]Site, error) {
 		sites = append(sites, s)
 	}
 	return sites, rows.Err()
+}
+
+type HistoryEntry struct {
+	ID        int64     `json:"id"`
+	SiteID    int64     `json:"site_id"`
+	Category  string    `json:"category"`
+	Model     string    `json:"model"`
+	Status    string    `json:"status"`
+	ErrorMsg  string    `json:"error_msg,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (d *DB) InsertHistory(siteID int64, category, model, status, errMsg string) error {
+	_, err := d.conn.Exec(
+		`INSERT INTO site_history (site_id, category, model, status, error_msg) VALUES (?,?,?,?,?)`,
+		siteID, category, model, status, errMsg,
+	)
+	return err
+}
+
+func (d *DB) GetHistory(siteID int64) ([]HistoryEntry, error) {
+	rows, err := d.conn.Query(
+		`SELECT id, site_id, category, model, status, error_msg, created_at FROM site_history WHERE site_id = ? ORDER BY created_at DESC`,
+		siteID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []HistoryEntry
+	for rows.Next() {
+		var e HistoryEntry
+		if err := rows.Scan(&e.ID, &e.SiteID, &e.Category, &e.Model, &e.Status, &e.ErrorMsg, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
 }

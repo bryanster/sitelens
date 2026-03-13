@@ -56,6 +56,19 @@
       document.getElementById('active-category').value = cat;
       htmx.trigger(document.getElementById('search-input'), 'search');
     }
+
+    async function toggleHistory(id, btn) {
+      const existing = document.getElementById('history-row-' + id);
+      if (existing) {
+        existing.remove();
+        btn.classList.remove('active');
+        return;
+      }
+      const res = await fetch('/api/sites/' + id + '/history');
+      const html = await res.text();
+      btn.closest('tr').insertAdjacentHTML('afterend', html);
+      btn.classList.add('active');
+    }
   </script>
 </body>
 </html>
@@ -80,17 +93,21 @@
       <th>Title</th>
       <th>Category</th>
       <th>Added</th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
     {{range .Sites}}
     <tr>
-      <td class="url-cell">
-        <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" title="{{.URL}}">{{.URL}}</a>
-      </td>
+      <td class="url-cell" title="{{.URL}}">{{.URL}}</td>
       <td class="title-cell">{{if .Title}}{{.Title}}{{else}}<span class="muted">—</span>{{end}}</td>
       <td>{{if .Category}}<span class="badge cat-{{slugify .Category}}">{{.Category}}</span>{{else}}<span class="muted">—</span>{{end}}</td>
       <td class="date-cell">{{.CreatedAt.Format "Jan 02, 15:04"}}</td>
+      <td class="action-cell">
+        <button class="icon-btn" onclick="toggleHistory({{.ID}}, this)" title="History">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
+      </td>
     </tr>
     {{end}}
   </tbody>

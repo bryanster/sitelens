@@ -59,6 +59,7 @@ func main() {
 			s = strings.ReplaceAll(s, " ", "-")
 			return s
 		},
+		"sub": func(a, b int) int { return a - b },
 	}
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(templateFS, "web/templates/*.html")
 	if err != nil {
@@ -86,6 +87,7 @@ func main() {
 	r.Get("/api/status", h.Status)
 	r.Get("/api/search", h.SearchAPI)
 	r.Get("/api/sites/batch", h.BatchSites)
+	r.Get("/api/sites/{id}/history", h.SiteHistory)
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("SiteLens running at http://localhost%s | DB: %s", addr, cfg.DBPath)

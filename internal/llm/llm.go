@@ -18,7 +18,8 @@ Categories:
 - Education
 - Government
 - Healthcare
-- Security/Phishing
+- Security
+- hacking / phising
 - Adult Content
 - Other
 

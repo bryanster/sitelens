@@ -232,11 +232,16 @@ func (h *Handler) SearchAPI(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GET /api/status — returns whether any rows are still pending
+// GET /api/status — returns stats and whether any rows are still pending
 func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
-	hasPending, _ := h.db.HasPending()
+	stats, _ := h.db.Stats()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"pending": hasPending})
+	json.NewEncoder(w).Encode(map[string]any{
+		"pending":    stats.Pending,
+		"total":      stats.Total,
+		"done":       stats.Done,
+		"categories": stats.Categories,
+	})
 }
 
 // process runs scrape + categorize in a goroutine.
@@ -247,6 +252,7 @@ func (h *Handler) process(id int64, rawURL string) {
 	if err != nil {
 		log.Printf("[scraper] %s: %v", rawURL, err)
 		h.db.UpdateSite(id, "", "", "", "", "error", err.Error())
+		h.db.InsertHistory(id, "", "", "error", err.Error())
 		return
 	}
 
@@ -254,11 +260,32 @@ func (h *Handler) process(id int64, rawURL string) {
 	if err != nil {
 		log.Printf("[ollama] %s: %v", rawURL, err)
 		h.db.UpdateSite(id, page.Title, page.Snippet, "", "", "error", err.Error())
+		h.db.InsertHistory(id, "", "", "error", err.Error())
 		return
 	}
 
 	h.db.UpdateSite(id, page.Title, page.Snippet, category, h.model, "done", "")
+	h.db.InsertHistory(id, category, h.model, "done", "")
 	log.Printf("[done] %s → %s", rawURL, category)
+}
+
+// GET /api/sites/{id}/history
+func (h *Handler) SiteHistory(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r)
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	entries, err := h.db.GetHistory(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	h.tmpl.ExecuteTemplate(w, "history-panel", map[string]any{
+		"SiteID":  id,
+		"Entries": entries,
+	})
 }
 
 func pathID(r *http.Request) (int64, error) {
