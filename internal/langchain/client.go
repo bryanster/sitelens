@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/tmc/langchaingo/llms"
 	"sitelens/internal/llm"
@@ -37,7 +36,7 @@ func (c *Client) Categorize(url, title, snippet string) (string, error) {
 		return "Other", nil
 	}
 
-	category := strings.TrimSpace(resp.Choices[0].Content)
+	category := llm.StripThinkTags(resp.Choices[0].Content)
 	if category == "" {
 		return "Other", nil
 	}

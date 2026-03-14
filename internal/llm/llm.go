@@ -1,5 +1,10 @@
 package llm
 
+import (
+	"regexp"
+	"strings"
+)
+
 // Categorizer is the common interface for any local LLM backend.
 type Categorizer interface {
 	Categorize(url, title, snippet string) (string, error)
@@ -23,6 +28,14 @@ var CategoryDescriptions = map[string]string{
 	"Logistics": "Shipping companies, delivery services, supply chain management, warehousing, package tracking, freight services, and logistics platforms.",
 	"Energy": "Power companies, energy utilities, renewable energy providers, energy trading, oil and gas companies, and energy infrastructure.",
 	"Other": "Websites that don't fit into any of the above categories or are unclear based on available information.",
+}
+  
+  var thinkTagRe = regexp.MustCompile(`(?s)<think>.*?</think>`)
+
+// StripThinkTags removes <think>...</think> blocks from LLM output
+// produced by reasoning models (e.g. DeepSeek-R1, QwQ).
+func StripThinkTags(s string) string {
+	return strings.TrimSpace(thinkTagRe.ReplaceAllString(s, ""))
 }
 
 const SystemPrompt = `You are a website categorization engine. Given information about a website, respond with ONLY a single category name from the list below — nothing else.
