@@ -9,14 +9,15 @@ import (
 	"net/http"
 	"strings"
 
+	lcollama "github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	"sitelens/internal/db"
 	"sitelens/internal/handlers"
+	"sitelens/internal/langchain"
 	"sitelens/internal/llm"
-	"sitelens/internal/lmstudio"
-	"sitelens/internal/ollama"
 )
 
 //go:embed web/templates/*.html
@@ -41,10 +42,22 @@ func main() {
 		if model == "" {
 			model = "llama3.2"
 		}
-		categorizer = ollama.New(cfg.LLMURL, model)
+		ollamaLLM, err := lcollama.New(lcollama.WithModel(model), lcollama.WithServerURL(cfg.LLMURL))
+		if err != nil {
+			log.Fatalf("init ollama: %v", err)
+		}
+		categorizer = langchain.New(ollamaLLM, cfg.LLMURL+"/api/tags")
 		log.Printf("Provider: Ollama | URL: %s | Model: %s", cfg.LLMURL, model)
 	default: // "lmstudio"
-		categorizer = lmstudio.New(cfg.LLMURL, cfg.LLMModel)
+		openaiLLM, err := openai.New(
+			openai.WithBaseURL(cfg.LLMURL+"/v1"),
+			openai.WithModel(cfg.LLMModel),
+			openai.WithToken("lm-studio"),
+		)
+		if err != nil {
+			log.Fatalf("init lmstudio: %v", err)
+		}
+		categorizer = langchain.New(openaiLLM, cfg.LLMURL+"/v1/models")
 		log.Printf("Provider: LM Studio | URL: %s | Model: %s (empty = loaded model)", cfg.LLMURL, cfg.LLMModel)
 	}
 
