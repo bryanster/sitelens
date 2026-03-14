@@ -62,10 +62,27 @@ Rules:
 - Do not add punctuation, explanation, or extra words.
 - If uncertain, use "Other".`
 
+// IsValidCategory checks if a category is in the allowed list
+func IsValidCategory(category string) bool {
+	_, exists := CategoryDescriptions[category]
+	return exists
+}
+
 // GetCategoryDescription returns the description for a given category
 func GetCategoryDescription(category string) string {
 	if desc, exists := CategoryDescriptions[category]; exists {
 		return desc
 	}
 	return CategoryDescriptions["Other"]
+}
+
+// ValidateCategory validates and sanitizes a category response from the LLM.
+// If the category is valid, returns it as-is.
+// If invalid, returns "Other" as the safe default.
+func ValidateCategory(category string) string {
+	category = strings.TrimSpace(category)
+	if IsValidCategory(category) {
+		return category
+	}
+	return "Other"
 }

@@ -266,9 +266,15 @@ func (h *Handler) process(id int64, rawURL string) {
 		return
 	}
 
-	h.db.UpdateSite(id, page.Title, page.Snippet, category, h.model, "done", "")
-	h.db.InsertHistory(id, category, h.model, "done", "")
-	log.Printf("[done] %s → %s", rawURL, category)
+	// Validate and sanitize the category from the LLM
+	validatedCategory := llm.ValidateCategory(category)
+	if validatedCategory != category {
+		log.Printf("[warning] invalid category from LLM: %q → %q", category, validatedCategory)
+	}
+
+	h.db.UpdateSite(id, page.Title, page.Snippet, validatedCategory, h.model, "done", "")
+	h.db.InsertHistory(id, validatedCategory, h.model, "done", "")
+	log.Printf("[done] %s → %s", rawURL, validatedCategory)
 }
 
 // GET /api/sites/{id}/history
