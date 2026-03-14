@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strings"
 
-	lcollama "github.com/tmc/langchaingo/llms/ollama"
-	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	lcollama "github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/llms/openai"
 
 	"sitelens/internal/db"
 	"sitelens/internal/handlers"
