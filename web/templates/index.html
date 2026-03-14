@@ -37,7 +37,7 @@
         <div class="chip-group" id="cat-chips">
           <button class="chip active" onclick="filterCat(this, '')">All</button>
           {{range .Categories}}
-          <button class="chip" data-cat="{{.}}" onclick="filterCat(this, '{{.}}')">{{.}}</button>
+          <button class="chip" data-cat="{{.}}" data-desc="{{index $.CategoryDescriptions .}}" title="{{index $.CategoryDescriptions .}}" onclick="filterCat(this, '{{.}}')">{{.}}</button>
           {{end}}
         </div>
         <div class="results-header-right">

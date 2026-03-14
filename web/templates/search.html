@@ -30,7 +30,7 @@
       <div class="chip-group" id="cat-chips">
         <button class="chip active" onclick="setCategory(this, '')">All categories</button>
         {{range .Categories}}
-        <button class="chip" onclick="setCategory(this, '{{.}}')">{{.}}</button>
+        <button class="chip" data-cat="{{.}}" data-desc="{{index $.CategoryDescriptions .}}" title="{{index $.CategoryDescriptions .}}" onclick="setCategory(this, '{{.}}')">{{.}}</button>
         {{end}}
       </div>
       <input type="hidden" id="active-category" name="category" value="">

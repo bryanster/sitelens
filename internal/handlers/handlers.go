@@ -46,6 +46,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		"HasPending": hasPending,
 		"Stats":      stats,
 		"ActivePage": "categorize",
+		"CategoryDescriptions": llm.CategoryDescriptions,
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	h.tmpl.ExecuteTemplate(w, "index.html", data)
@@ -209,6 +210,7 @@ func (h *Handler) SearchPage(w http.ResponseWriter, r *http.Request) {
 		"Stats":      stats,
 		"Sites":      []any{},
 		"ActivePage": "search",
+		"CategoryDescriptions": llm.CategoryDescriptions,
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	h.tmpl.ExecuteTemplate(w, "search.html", data)
