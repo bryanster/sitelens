@@ -14,7 +14,7 @@ func LoadConfig() Config {
 	return Config{
 		LLMProvider: getEnv("LLM_PROVIDER", "lmstudio"),
 		LLMURL:      getEnv("LLM_URL", "http://localhost:1234"),
-		LLMModel:    getEnv("LLM_MODEL", "qwen/qwen3-8b"),
+		LLMModel:    getEnv("LLM_MODEL", "qwen/qwen3.5-9b"),
 		DBPath:      getEnv("DB_PATH", "./sitelens.db"),
 		Port:        getEnv("PORT", "8080"),
 	}
