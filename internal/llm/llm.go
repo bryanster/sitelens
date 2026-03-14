@@ -1,9 +1,22 @@
 package llm
 
+import (
+	"regexp"
+	"strings"
+)
+
 // Categorizer is the common interface for any local LLM backend.
 type Categorizer interface {
 	Categorize(url, title, snippet string) (string, error)
 	HealthCheck() bool
+}
+
+var thinkTagRe = regexp.MustCompile(`(?s)<think>.*?</think>`)
+
+// StripThinkTags removes <think>...</think> blocks from LLM output
+// produced by reasoning models (e.g. DeepSeek-R1, QwQ).
+func StripThinkTags(s string) string {
+	return strings.TrimSpace(thinkTagRe.ReplaceAllString(s, ""))
 }
 
 const SystemPrompt = `You are a website categorization engine. Given information about a website, respond with ONLY a single category name from the list below — nothing else.
